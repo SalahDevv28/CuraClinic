@@ -3,7 +3,7 @@
 @theme inline {
   --color-background: #FDF2F8;
   --color-foreground: #1F1F1F;
-  --font-sans: "Public Sans", sans-serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
   
   /* Design System Colors */
   --color-primary: #BD5189;

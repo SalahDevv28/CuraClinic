@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Public_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
+import { SidebarProvider } from "@/components/SidebarContext";
 import { ClientInit } from "@/components/ClientInit";
+import { MainContent } from "@/components/MainContent";
 
-const publicSans = Public_Sans({
-  variable: "--font-public-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
@@ -21,13 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${publicSans.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex font-sans bg-background">
-        <ClientInit />
-        <Sidebar />
-        <main className="flex-1 ml-64 min-h-screen p-8">
-          {children}
-        </main>
+        <SidebarProvider>
+          <ClientInit />
+          <Sidebar />
+          <MainContent>{children}</MainContent>
+        </SidebarProvider>
       </body>
     </html>
   );
