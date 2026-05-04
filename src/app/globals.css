@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #FDF2F8;
+  --color-foreground: #1F1F1F;
+  --font-sans: "Public Sans", sans-serif;
+  
+  /* Design System Colors */
+  --color-primary: #BD5189;
+  --color-primary-light: #D484AB;
+  --color-primary-dark: #9A3D6E;
+  --color-primary-50: #FDF2F8;
+  --color-primary-100: #FCE8F3;
+  --color-primary-200: #F9D0E8;
+  --color-primary-300: #F4A9D3;
+  --color-primary-400: #ED78B6;
+  --color-primary-500: #BD5189;
+  --color-primary-600: #A84078;
+  --color-primary-700: #8C3362;
+  --color-primary-800: #752D55;
+  --color-primary-900: #632A4A;
+  
+  --color-secondary: #9C677F;
+  --color-secondary-light: #B892A4;
+  --color-secondary-dark: #7A4F62;
+  
+  --color-tertiary: #084300;
+  --color-tertiary-light: #2D6B2A;
+  --color-tertiary-dark: #052E00;
+  --color-tertiary-50: #E8F5E8;
+  --color-tertiary-100: #D1EBD0;
+  
+  --color-neutral: #817378;
+  --color-neutral-light: #A89E9E;
+  --color-neutral-dark: #5C534F;
+  --color-neutral-50: #F5F0F0;
+  --color-neutral-100: #E8E0E0;
+  --color-neutral-200: #D1C5C5;
+  
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-border: #E8E0E0;
+  
+  --color-success: #084300;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  --color-info: #4F46E5;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-primary-50);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary-300);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-400);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
