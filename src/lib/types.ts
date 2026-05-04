@@ -27,6 +27,7 @@ export interface Appointment {
   time: string;
   duration: number;
   type: string;
+  visitType: "first-visit" | "check-up" | "follow-up" | "procedure" | "consultation";
   status: "scheduled" | "confirmed" | "completed" | "cancelled" | "no-show" | "urgent";
   notes: string;
   reminderSent: boolean;

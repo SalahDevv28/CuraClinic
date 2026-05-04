@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Search, Filter, MoreVertical, Clock, User, Phone, Mail, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Plus, Search, Filter, MoreVertical, Clock, User, X, ChevronLeft, ChevronRight, Sparkles, RotateCcw, Stethoscope, ClipboardCheck, Grid3X3, List } from "lucide-react";
 import { appointmentsStore, patientsStore } from "@/lib/store";
 import { Appointment, Patient } from "@/lib/types";
 
@@ -12,6 +12,7 @@ interface AppointmentFormData {
   time: string;
   duration: number;
   type: string;
+  visitType: Appointment["visitType"];
   status: Appointment["status"];
   notes: string;
 }
@@ -23,6 +24,7 @@ const initialFormData: AppointmentFormData = {
   time: "09:00",
   duration: 30,
   type: "",
+  visitType: "check-up",
   status: "scheduled",
   notes: "",
 };
@@ -36,6 +38,8 @@ export default function AppointmentsPage() {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [formData, setFormData] = useState<AppointmentFormData>(initialFormData);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
     loadData();
@@ -79,6 +83,7 @@ export default function AppointmentsPage() {
       time: appointment.time,
       duration: appointment.duration,
       type: appointment.type,
+      visitType: appointment.visitType,
       status: appointment.status,
       notes: appointment.notes,
     });
@@ -114,6 +119,38 @@ export default function AppointmentsPage() {
     setSelectedDate(date.toISOString().split("T")[0]);
   };
 
+  // Calendar functions
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days: { date: number; fullDate: string; hasAppointments: boolean }[] = [];
+    
+    // Empty slots for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push({ date: 0, fullDate: "", hasAppointments: false });
+    }
+    
+    // Days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      const fullDate = new Date(year, month, i).toISOString().split("T")[0];
+      const hasAppointments = appointments.some((a) => a.date === fullDate);
+      days.push({ date: i, fullDate, hasAppointments });
+    }
+    
+    return days;
+  };
+
+  const navigateMonth = (direction: number) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + direction);
+    setCurrentMonth(newMonth);
+  };
+
   const statusColors = {
     scheduled: "bg-primary-100 text-primary",
     confirmed: "bg-tertiary-100 text-tertiary",
@@ -123,6 +160,21 @@ export default function AppointmentsPage() {
     "no-show": "bg-orange-100 text-warning",
   };
 
+  const visitTypeConfig = {
+    "first-visit": { label: "First Visit", icon: Sparkles, color: "bg-blue-100 text-blue-600" },
+    "check-up": { label: "Check-up", icon: ClipboardCheck, color: "bg-teal-100 text-teal-600" },
+    "follow-up": { label: "Follow-up", icon: RotateCcw, color: "bg-indigo-100 text-indigo-600" },
+    "procedure": { label: "Procedure", icon: Stethoscope, color: "bg-amber-100 text-amber-600" },
+    "consultation": { label: "Consultation", icon: User, color: "bg-rose-100 text-rose-600" },
+  };
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -131,155 +183,263 @@ export default function AppointmentsPage() {
           <h1 className="text-3xl font-bold text-foreground">Appointments</h1>
           <p className="text-neutral mt-1">Manage patient appointments and scheduling</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingAppointment(null);
-            setFormData(initialFormData);
-            setShowModal(true);
-          }}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
-        >
-          <Plus className="w-5 h-5" />
-          New Appointment
-        </button>
-      </div>
-
-      {/* Date Navigation */}
-      <div className="flex items-center gap-4 bg-surface rounded-xl border border-border p-4">
-        <button
-          onClick={() => navigateDate(-1)}
-          className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5 text-neutral" />
-        </button>
-        <div className="flex items-center gap-2 flex-1">
-          <Calendar className="w-5 h-5 text-primary" />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="flex-1 bg-transparent font-semibold text-foreground outline-none"
-          />
-        </div>
-        <button
-          onClick={() => navigateDate(1)}
-          className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
-        >
-          <ChevronRight className="w-5 h-5 text-neutral" />
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 min-w-[300px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral" />
-          <input
-            type="text"
-            placeholder="Search appointments..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-neutral outline-none focus:border-primary transition-colors"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-neutral" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-3 bg-surface border border-border rounded-xl text-foreground outline-none focus:border-primary transition-colors"
+        <div className="flex items-center gap-3">
+          <div className="flex bg-surface rounded-xl border border-border overflow-hidden">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                viewMode === "list" ? "bg-primary text-white" : "text-neutral hover:text-primary"
+              }`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                viewMode === "calendar" ? "bg-primary text-white" : "text-neutral hover:text-primary"
+              }`}
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setEditingAppointment(null);
+              setFormData(initialFormData);
+              setShowModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
           >
-            <option value="all">All Status</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="urgent">Urgent</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="no-show">No-show</option>
-          </select>
+            <Plus className="w-5 h-5" />
+            New Appointment
+          </button>
         </div>
       </div>
 
-      {/* Appointments List */}
-      <div className="bg-surface rounded-2xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-primary-50 border-b border-border">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Time</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Patient</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Type</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Duration</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredAppointments.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-neutral">
-                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-lg font-medium">No appointments found</p>
-                    <p className="text-sm">Create a new appointment to get started</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredAppointments.map((appointment) => (
-                  <tr key={appointment.id} className="hover:bg-primary-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-neutral" />
-                        <span className="font-medium text-foreground">{appointment.time}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center">
-                          <User className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="font-medium text-foreground">{appointment.patientName}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-neutral">{appointment.type}</td>
-                    <td className="px-6 py-4 text-sm text-neutral">{appointment.duration} min</td>
-                    <td className="px-6 py-4">
-                      <select
-                        value={appointment.status}
-                        onChange={(e) => handleStatusChange(appointment.id, e.target.value as Appointment["status"])}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold border-0 outline-none cursor-pointer ${statusColors[appointment.status as keyof typeof statusColors] || statusColors.scheduled}`}
-                      >
-                        <option value="scheduled">Scheduled</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="urgent">Urgent</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="no-show">No-show</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(appointment)}
-                          className="p-2 hover:bg-primary-100 rounded-lg transition-colors text-neutral hover:text-primary"
-                          title="Edit"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(appointment.id)}
-                          className="p-2 hover:bg-red-100 rounded-lg transition-colors text-neutral hover:text-error"
-                          title="Cancel"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+      {viewMode === "list" ? (
+        <>
+          {/* Date Navigation */}
+          <div className="flex items-center gap-4 bg-surface rounded-xl border border-border p-4">
+            <button
+              onClick={() => navigateDate(-1)}
+              className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-neutral" />
+            </button>
+            <div className="flex items-center gap-2 flex-1">
+              <Calendar className="w-5 h-5 text-primary" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="flex-1 bg-transparent font-semibold text-foreground outline-none"
+              />
+            </div>
+            <button
+              onClick={() => navigateDate(1)}
+              className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+            >
+              <ChevronRight className="w-5 h-5 text-neutral" />
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative flex-1 min-w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral" />
+              <input
+                type="text"
+                placeholder="Search appointments..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-neutral outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-neutral" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-3 bg-surface border border-border rounded-xl text-foreground outline-none focus:border-primary transition-colors"
+              >
+                <option value="all">All Status</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="urgent">Urgent</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="no-show">No-show</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Appointments List */}
+          <div className="bg-surface rounded-2xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-primary-50 border-b border-border">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Time</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Patient</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Type</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Visit Type</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Duration</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredAppointments.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center text-neutral">
+                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-lg font-medium">No appointments found</p>
+                        <p className="text-sm">Create a new appointment to get started</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAppointments.map((appointment) => {
+                      const vType = visitTypeConfig[appointment.visitType];
+                      return (
+                        <tr key={appointment.id} className="hover:bg-primary-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-neutral" />
+                              <span className="font-medium text-foreground">{appointment.time}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center">
+                                <User className="w-4 h-4 text-primary" />
+                              </div>
+                              <span className="font-medium text-foreground">{appointment.patientName}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral">{appointment.type}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${vType.color}`}>
+                              <vType.icon className="w-3 h-3" />
+                              {vType.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral">{appointment.duration} min</td>
+                          <td className="px-6 py-4">
+                            <select
+                              value={appointment.status}
+                              onChange={(e) => handleStatusChange(appointment.id, e.target.value as Appointment["status"])}
+                              className={`px-3 py-1 rounded-full text-xs font-semibold border-0 outline-none cursor-pointer ${statusColors[appointment.status as keyof typeof statusColors] || statusColors.scheduled}`}
+                            >
+                              <option value="scheduled">Scheduled</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="urgent">Urgent</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                              <option value="no-show">No-show</option>
+                            </select>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleEdit(appointment)}
+                                className="p-2 hover:bg-primary-100 rounded-lg transition-colors text-neutral hover:text-primary"
+                                title="Edit"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(appointment.id)}
+                                className="p-2 hover:bg-red-100 rounded-lg transition-colors text-neutral hover:text-error"
+                                title="Cancel"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Calendar View */
+        <div className="bg-surface rounded-2xl border border-border overflow-hidden p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-foreground">
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigateMonth(-1)}
+                className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 text-neutral" />
+              </button>
+              <button
+                onClick={() => setCurrentMonth(new Date())}
+                className="px-4 py-2 bg-primary-50 text-primary rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => navigateMonth(1)}
+                className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+              >
+                <ChevronRight className="w-5 h-5 text-neutral" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden">
+            {/* Week day headers */}
+            {weekDays.map((day) => (
+              <div key={day} className="bg-primary-50 py-3 text-center text-sm font-semibold text-foreground">
+                {day}
+              </div>
+            ))}
+            
+            {/* Calendar days */}
+            {getDaysInMonth(currentMonth).map((day, index) => (
+              <div
+                key={index}
+                className={`bg-surface min-h-[100px] p-2 cursor-pointer hover:bg-primary-50/30 transition-colors ${
+                  day.fullDate === selectedDate ? "ring-2 ring-primary ring-inset" : ""
+                } ${day.date === 0 ? "bg-neutral-50/50" : ""}`}
+                onClick={() => {
+                  if (day.fullDate) {
+                    setSelectedDate(day.fullDate);
+                    setViewMode("list");
+                  }
+                }}
+              >
+                {day.date !== 0 && (
+                  <>
+                    <span className={`text-sm font-medium ${
+                      day.fullDate === new Date().toISOString().split("T")[0] 
+                        ? "w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center" 
+                        : "text-foreground"
+                    }`}>
+                      {day.date}
+                    </span>
+                    {day.hasAppointments && (
+                      <div className="mt-2">
+                        <div className="w-full h-2 bg-primary rounded-full mb-1"></div>
+                        <p className="text-xs text-neutral">
+                          {appointments.filter((a) => a.date === day.fullDate).length} appts
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modal */}
       {showModal && (
@@ -370,16 +530,32 @@ export default function AppointmentsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Appointment Type</label>
-                <input
-                  type="text"
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  placeholder="e.g., Annual Physical, Follow-up"
-                  required
-                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder-neutral outline-none focus:border-primary transition-colors"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Appointment Type</label>
+                  <input
+                    type="text"
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    placeholder="e.g., Annual Physical"
+                    required
+                    className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder-neutral outline-none focus:border-primary transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Visit Type</label>
+                  <select
+                    value={formData.visitType}
+                    onChange={(e) => setFormData({ ...formData, visitType: e.target.value as Appointment["visitType"] })}
+                    className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary transition-colors"
+                  >
+                    <option value="first-visit">First Visit</option>
+                    <option value="check-up">Check-up</option>
+                    <option value="follow-up">Follow-up</option>
+                    <option value="procedure">Procedure</option>
+                    <option value="consultation">Consultation</option>
+                  </select>
+                </div>
               </div>
 
               <div>

@@ -3,47 +3,18 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  Users, 
   Calendar, 
   CheckSquare, 
-  Clock, 
   Plus, 
-  ArrowRight,
   AlertCircle,
-  Phone
+  Phone,
+  Sparkles,
+  RotateCcw,
+  Stethoscope,
+  ClipboardCheck
 } from "lucide-react";
-import { appointmentsStore, patientsStore, tasksStore, followupsStore } from "@/lib/store";
+import { appointmentsStore, tasksStore, followupsStore } from "@/lib/store";
 import { Appointment, Task, FollowUp } from "@/lib/types";
-
-function StatCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
-  color,
-  href 
-}: { 
-  title: string; 
-  value: string | number; 
-  subtitle: string; 
-  icon: React.ElementType; 
-  color: string;
-  href: string;
-}) {
-  return (
-    <Link href={href} className="bg-surface rounded-2xl p-6 border border-border hover:shadow-lg transition-all duration-200 group">
-      <div className="flex items-start justify-between mb-4">
-        <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
-        <ArrowRight className="w-5 h-5 text-neutral opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-      <h3 className="text-3xl font-bold text-foreground mb-1">{value}</h3>
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="text-xs text-neutral mt-1">{subtitle}</p>
-    </Link>
-  );
-}
 
 function AppointmentItem({ appointment }: { appointment: Appointment }) {
   const statusColors = {
@@ -54,6 +25,16 @@ function AppointmentItem({ appointment }: { appointment: Appointment }) {
     urgent: "bg-red-100 text-error",
     "no-show": "bg-orange-100 text-warning",
   };
+
+  const visitTypeConfig = {
+    "first-visit": { label: "First Visit", icon: Sparkles, color: "bg-blue-100 text-blue-600" },
+    "check-up": { label: "Check-up", icon: ClipboardCheck, color: "bg-teal-100 text-teal-600" },
+    "follow-up": { label: "Follow-up", icon: RotateCcw, color: "bg-indigo-100 text-indigo-600" },
+    "procedure": { label: "Procedure", icon: Stethoscope, color: "bg-amber-100 text-amber-600" },
+    "consultation": { label: "Consultation", icon: Phone, color: "bg-rose-100 text-rose-600" },
+  };
+
+  const visitType = visitTypeConfig[appointment.visitType];
 
   return (
     <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-primary-50 transition-colors">
@@ -66,9 +47,15 @@ function AppointmentItem({ appointment }: { appointment: Appointment }) {
         <p className="font-semibold text-foreground truncate">{appointment.patientName}</p>
         <p className="text-sm text-neutral truncate">{appointment.type}</p>
       </div>
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[appointment.status as keyof typeof statusColors] || statusColors.scheduled}`}>
-        {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${visitType.color}`}>
+          <visitType.icon className="w-3 h-3" />
+          {visitType.label}
+        </span>
+        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[appointment.status as keyof typeof statusColors] || statusColors.scheduled}`}>
+          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+        </span>
+      </div>
     </div>
   );
 }
@@ -100,30 +87,14 @@ function TaskItem({ task }: { task: Task }) {
 }
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({
-    todayAppointments: 0,
-    totalPatients: 0,
-    pendingTasks: 0,
-    followUps: 0,
-    urgentCases: 0,
-  });
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
 
   useEffect(() => {
     const appointments = appointmentsStore.getToday();
-    const patients = patientsStore.getAll();
     const tasks = tasksStore.getAll();
     const followups = followupsStore.getAll();
-
-    setStats({
-      todayAppointments: appointments.length,
-      totalPatients: patients.length,
-      pendingTasks: tasks.filter((t) => t.status !== "completed").length,
-      followUps: followups.filter((f) => f.status === "pending").length,
-      urgentCases: appointments.filter((a) => a.status === "urgent").length,
-    });
 
     setTodayAppointments(appointments);
     setPendingTasks(tasks.filter((t) => t.status !== "completed").slice(0, 5));
@@ -151,42 +122,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Today's Appointments"
-          value={stats.todayAppointments}
-          subtitle={`${stats.urgentCases} urgent cases`}
-          icon={Calendar}
-          color="bg-primary"
-          href="/appointments"
-        />
-        <StatCard
-          title="Total Patients"
-          value={stats.totalPatients}
-          subtitle="Registered patients"
-          icon={Users}
-          color="bg-secondary"
-          href="/patients"
-        />
-        <StatCard
-          title="Pending Tasks"
-          value={stats.pendingTasks}
-          subtitle="Requires attention"
-          icon={CheckSquare}
-          color="bg-tertiary"
-          href="/tasks"
-        />
-        <StatCard
-          title="Follow-ups"
-          value={stats.followUps}
-          subtitle="Pending follow-ups"
-          icon={Phone}
-          color="bg-neutral"
-          href="/followups"
-        />
-      </div>
-
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-4">
         <Link
@@ -200,14 +135,12 @@ export default function Dashboard() {
           href="/patients"
           className="inline-flex items-center gap-2 px-6 py-3 bg-surface text-foreground rounded-xl font-medium border border-border hover:bg-primary-50 transition-colors"
         >
-          <Users className="w-5 h-5" />
           Add Patient
         </Link>
         <Link
           href="/tasks"
           className="inline-flex items-center gap-2 px-6 py-3 bg-surface text-foreground rounded-xl font-medium border border-border hover:bg-primary-50 transition-colors"
         >
-          <CheckSquare className="w-5 h-5" />
           Create Task
         </Link>
       </div>
