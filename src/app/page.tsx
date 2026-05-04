@@ -34,7 +34,7 @@ function AppointmentItem({ appointment }: { appointment: Appointment }) {
     "consultation": { label: "Consultation", icon: Phone, color: "bg-rose-100 text-rose-600" },
   };
 
-  const visitType = visitTypeConfig[appointment.visitType];
+  const visitType = visitTypeConfig[appointment.visitType] || visitTypeConfig["check-up"];
 
   return (
     <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-primary-50 transition-colors">

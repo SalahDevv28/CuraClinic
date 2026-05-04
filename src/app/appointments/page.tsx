@@ -299,7 +299,7 @@ export default function AppointmentsPage() {
                     </tr>
                   ) : (
                     filteredAppointments.map((appointment) => {
-                      const vType = visitTypeConfig[appointment.visitType];
+                      const vType = visitTypeConfig[appointment.visitType] || visitTypeConfig["check-up"];
                       return (
                         <tr key={appointment.id} className="hover:bg-primary-50/50 transition-colors">
                           <td className="px-6 py-4">

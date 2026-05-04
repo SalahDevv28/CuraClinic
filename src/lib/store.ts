@@ -8,6 +8,9 @@ const STORAGE_KEYS = {
   reminders: "curaclinic_reminders",
 };
 
+const DATA_VERSION = "2";
+const VERSION_KEY = "curaclinic_version";
+
 // Generic CRUD operations
 function getItems<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
@@ -30,9 +33,26 @@ function getRelativeDate(days: number): string {
   return date.toISOString().split("T")[0];
 }
 
+function migrateData(): void {
+  if (typeof window === "undefined") return;
+  
+  const currentVersion = localStorage.getItem(VERSION_KEY);
+  
+  if (currentVersion !== DATA_VERSION) {
+    // Clear old data to ensure compatibility
+    Object.values(STORAGE_KEYS).forEach((key) => {
+      localStorage.removeItem(key);
+    });
+    localStorage.setItem(VERSION_KEY, DATA_VERSION);
+  }
+}
+
 // Initialize with sample data
 export function initializeStore(): void {
   if (typeof window === "undefined") return;
+  
+  // Migrate/clear old data if version mismatch
+  migrateData();
   
   if (!localStorage.getItem(STORAGE_KEYS.patients)) {
     const samplePatients: Patient[] = [
